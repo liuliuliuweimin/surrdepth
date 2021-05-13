@@ -19,7 +19,7 @@ cfg.arch.max_epochs = 20                # Maximum number of epochs
 ### CHECKPOINT
 ########################################################################################################################
 cfg.checkpoint = CN()
-cfg.checkpoint.filepath = '/home/thuar/Desktop/surround_depth/checkpoints'            # Checkpoint filepath to save data
+cfg.checkpoint.filepath = '/home/duanyc/Dtorch/surrdepth/checkpoints'            # Checkpoint filepath to save data
 cfg.checkpoint.save_top_k = 50           # Number of best models to save
 cfg.checkpoint.monitor = 'abs_rel'      # Metric to monitor for logging
 cfg.checkpoint.monitor_index = 0        # Dataset index for the metric to monitor

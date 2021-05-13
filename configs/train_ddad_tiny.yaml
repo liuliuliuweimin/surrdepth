@@ -27,7 +27,7 @@ datasets:
         batch_size: 1
         num_workers: 1
         dataset: ['DGP']
-        path: ['/home/thuar/Desktop/datasets/ddad_train_val/ddad_train.json']
+        path: ['/home/duanyc/Dtorch/surrdepth/data/datasets/DDAD_tiny/ddad_tiny.json']
         split: ['train']
         depth_type: ['lidar']
         cameras: [['camera_01','camera_06','camera_08','camera_09','camera_07','camera_05']]
@@ -35,14 +35,14 @@ datasets:
     validation:
         num_workers: 1
         dataset: ['DGP']
-        path: ['/home/thuar/Desktop/datasets/ddad_train_val/ddad_train.json']
+        path: ['/home/duanyc/Dtorch/surrdepth/data/datasets/DDAD_tiny/ddad_tiny.json']
         split: ['val']
         depth_type: ['lidar']
         cameras: [['camera_01','camera_06','camera_08','camera_09','camera_07','camera_05']]
     test:
         num_workers: 1
         dataset: ['DGP']
-        path: ['/home/thuar/Desktop/datasets/ddad_train_val/ddad_train.json']
+        path: ['/home/duanyc/Dtorch/surrdepth/data/datasets/DDAD_tiny/ddad_tiny.json']
         split: ['val']
         depth_type: ['lidar']
         cameras: [['camera_01','camera_06','camera_08','camera_09','camera_07','camera_05']]
