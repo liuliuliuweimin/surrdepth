@@ -94,6 +94,7 @@ class MultiViewPhotometricLoss(LossBase):
     """
     def __init__(self, num_scales=4, ssim_loss_weight=0.85, occ_reg_weight=0.1, smooth_loss_weight=0.1,
                  consistency_loss_weight=0.1, C1=1e-4, C2=9e-4, photometric_reduce_op='mean', disp_norm=True,
+                 sort_cameras=False, sort_swap=[],
                  clip_loss=0.5, progressive_scaling=0.0, padding_mode='zeros', t_loss_weight=0.1, R_loss_weight=0.1,
                  temporal_loss_weight=1.0, spatial_loss_weight=0.1, automask_loss=True,
                  consistency_loss=True, cameras=None, **kwargs):
@@ -118,6 +119,8 @@ class MultiViewPhotometricLoss(LossBase):
         self.spatial_loss_weight = spatial_loss_weight
         self.progressive_scaling = ProgressiveScaling(
             progressive_scaling, self.n)
+        self.sort_cameras = sort_cameras
+        self.sort_swap = sort_swap
         self.cameras = cameras
 
         # Asserts
@@ -128,8 +131,7 @@ class MultiViewPhotometricLoss(LossBase):
             assert self.cameras is not None, 'Need camera number parameters for consistency loss'
             self.num_cameras = len(self.cameras)
 
-########################################################################################################################
-
+    ########################################################################################################################
     @property
     def logs(self):
         """Returns class logs."""
@@ -137,7 +139,21 @@ class MultiViewPhotometricLoss(LossBase):
             'num_scales': self.n,
         }
 
-########################################################################################################################
+    ########################################################################################################################
+
+    def sort_cameras_tensor(self, tensor):
+        if isinstance(tensor, list):
+            assert tensor[0].shape[0] == 6, "Batch size is not 6"
+            result_list = []
+            for idx in range(len(tensor)):
+                result_list.append(torch.tensor(tensor[idx][self.sort_swap, ...], dtype=torch.float32,
+                                                device=tensor[idx].device))
+            return result_list
+        elif isinstance(tensor, torch.Tensor):
+            assert tensor.shape[0] == 6, "Batch size is not 6"
+            return torch.tensor(tensor[self.sort_swap, ...], dtype=torch.float32, device=tensor.device)
+
+    ########################################################################################################################
 
     def warp_ref_image_temporal(self, inv_depths, ref_image, K, ref_K, pose):
         """
@@ -316,7 +332,6 @@ class MultiViewPhotometricLoss(LossBase):
     def reduce_photometric_loss(self, photometric_losses):
         """
         Combine the photometric loss from all context images
-
         Parameters
         ----------
         photometric_losses : list of torch.Tensor [B,3,H,W]
@@ -465,6 +480,17 @@ class MultiViewPhotometricLoss(LossBase):
         losses_and_metrics : dict
             Output dictionary
         """
+
+
+        # Step 0: prepare for loss calculation
+        # Reorganize the order of camearas -- (See more API information about the datasets)
+        image = self.sort_cameras_tensor(image)
+        context = self.sort_cameras_tensor(context)
+        inv_depths = self.sort_cameras_tensor(inv_depths)
+        K = self.sort_cameras_tensor(K)
+        ref_K = K
+        poses = [Pose(self.sort_cameras_tensor(poses[0].item())), Pose(self.sort_cameras_tensor(poses[1].item()))]
+
         # If using progressive scaling
         self.n = self.progressive_scaling(progress)
         # Loop over all reference images
@@ -475,6 +501,7 @@ class MultiViewPhotometricLoss(LossBase):
         for j, (ref_image, pose) in enumerate(zip(context, poses)):
             # Calculate warped images
             ref_warped = self.warp_ref_image_temporal(inv_depths, ref_image, K, ref_K, pose)
+
             # Calculate and store image loss
 
             # print('### poses shape', len(poses))
@@ -487,11 +514,11 @@ class MultiViewPhotometricLoss(LossBase):
             # print('len of ref_warped: ',len(ref_warped))
             # print('shape of ref_warped[0]', ref_warped[0].shape)
 
-            # pic_orig = images[0][5].cpu().clone()
+            # pic_orig = images[0][0].cpu().clone()
             # pic_orig = (pic_orig.squeeze(0).permute(1,2,0).detach().numpy()*255).astype(np.uint8)
-            # pic_ref = context[0][5].cpu().clone()
+            # pic_ref = context[0][0].cpu().clone()
             # pic_ref = (pic_ref.squeeze(0).permute(1, 2, 0).detach().numpy() * 255).astype(np.uint8)
-            # pic_warped = ref_warped[0][5].cpu().clone()
+            # pic_warped = ref_warped[0][0].cpu().clone()
             # pic_warped = (pic_warped.squeeze(0).permute(1,2,0).detach().numpy()*255).astype(np.uint8)
             # final_frame = cv2.hconcat((pic_orig, pic_ref, pic_warped))
             # cv2.imshow('temporal warping', final_frame)
@@ -511,7 +538,8 @@ class MultiViewPhotometricLoss(LossBase):
         # Step 2: Calculate the losses spatial-wise
         # reconstruct context images
         num_cameras, C, H, W = image.shape  # should be (6, 3, H, W)
-
+        left_swap = [i for i in range(-1, num_cameras - 1)]
+        right_swap = [i % 6 for i in range(1, num_cameras + 1)]
 
         # for i in range(num_cameras):
         #     pic = image[i].cpu().clone()
@@ -523,15 +551,6 @@ class MultiViewPhotometricLoss(LossBase):
         # cv2.imshow('6 images', final_file)
         # cv2.waitKey()
 
-
-
-
-
-        sequence = [0,2,4,5,3,1]
-        # left_swap = [i for i in range(-1, num_cameras-1)]
-        # right_swap = [i % 6 for i in range(1, num_cameras+1)]
-        left_swap = [1,3,0,5,2,4]
-        right_swap = [2,0,4,1,5,3]
 
         context_spatial = [[], []]  # [[B,3,H,W],[B,3,H,W]]
         context_spatial[0] = image[left_swap, ...]
@@ -551,13 +570,13 @@ class MultiViewPhotometricLoss(LossBase):
             ref_warped, valid_points_masks = self.warp_ref_image_spatial(inv_depths, ref_image, K_spatial
                                                                          , ref_K_spatial[j], Pose(extrinsics_1), Pose(extrinsics_2[j]))
 
-            # pic_orig = images[0][5].cpu().clone()
+            # pic_orig = images[0][1].cpu().clone()
             # pic_orig = (pic_orig.squeeze(0).permute(1,2,0).detach().numpy()*255).astype(np.uint8)
-            # pic_ref = context_spatial[0][5].cpu().clone()
+            # pic_ref = context_spatial[0][1].cpu().clone()
             # pic_ref = (pic_ref.squeeze(0).permute(1, 2, 0).detach().numpy() * 255).astype(np.uint8)
-            # pic_warped = ref_warped[0][5].cpu().clone()
+            # pic_warped = ref_warped[0][1].cpu().clone()
             # pic_warped = (pic_warped.squeeze(0).permute(1,2,0).detach().numpy()*255).astype(np.uint8)
-            # pic_valid = valid_points_masks[0][5].cpu().clone()
+            # pic_valid = valid_points_masks[0][1].cpu().clone()
             # pic_valid = (pic_valid.permute(1,2,0).detach().numpy()*255).astype(np.uint8)
             # final_frame = cv2.hconcat((pic_orig, pic_ref, pic_warped))
             # cv2.imshow('spatial warping', final_frame)
@@ -628,6 +647,7 @@ class MultiViewPhotometricLoss(LossBase):
         if self.smooth_loss_weight > 0.0:
             loss += self.calc_smoothness_loss(inv_depths, images)
         if self.consistency_loss:
+            print('##mul.py using consistency_loss')
             # poses: type List [[pose(t->t-1)], [pose(t->t+1)]]
             loss += self.calc_consistency_loss(poses, extrinsics)
         # Return losses and metrics

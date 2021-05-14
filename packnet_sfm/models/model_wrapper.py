@@ -1,4 +1,5 @@
 # Copyright 2020 Toyota Research Institute.  All rights reserved.
+# Copyright 2020 Toyota Research Institute.  All rights reserved.
 
 from collections import OrderedDict
 import os
@@ -183,7 +184,6 @@ class ModelWrapper(torch.nn.Module):
     def training_step(self, batch, *args):
         """Processes a training batch."""
         batch = stack_batch(batch)
-        print(batch['rgb'].shape)
         output = self.model(batch, progress=self.progress)
         return {
             'loss': output['loss'],

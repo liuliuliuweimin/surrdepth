@@ -89,6 +89,7 @@ class HorovodTrainer(BaseTrainer):
             # Append output to list of outputs
             output['loss'] = output['loss'].detach()
             outputs.append(output)
+            print('###model_wrapper.py output', output)
             # Update progress bar if in rank 0
             if self.is_rank_0:
                 progress_bar.set_description(
