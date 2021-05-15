@@ -1,5 +1,5 @@
 model:
-    name: 'VelSupModel'
+    name: 'SupModel'
     optimizer:
         name: 'Adam'
         depth:

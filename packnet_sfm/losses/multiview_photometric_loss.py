@@ -94,10 +94,9 @@ class MultiViewPhotometricLoss(LossBase):
     """
     def __init__(self, num_scales=4, ssim_loss_weight=0.85, occ_reg_weight=0.1, smooth_loss_weight=0.1,
                  consistency_loss_weight=0.1, C1=1e-4, C2=9e-4, photometric_reduce_op='mean', disp_norm=True,
-                 sort_cameras=False, sort_swap=[],
-                 clip_loss=0.5, progressive_scaling=0.0, padding_mode='zeros', t_loss_weight=0.1, R_loss_weight=0.1,
-                 temporal_loss_weight=1.0, spatial_loss_weight=0.1, automask_loss=True,
-                 consistency_loss=True, cameras=None, **kwargs):
+                 sort_cameras=False, sort_swap=[], clip_loss=0.5, progressive_scaling=0.0, padding_mode='zeros',
+                 temporal_loss_weight=1.0, spatial_loss_weight=0.1, temporal_spatial_loss_weight=0.1
+                 , automask_loss=True, cameras=None, **kwargs):
         super().__init__()
         self.n = num_scales
         self.progressive_scaling = progressive_scaling
@@ -112,11 +111,9 @@ class MultiViewPhotometricLoss(LossBase):
         self.clip_loss = clip_loss
         self.padding_mode = padding_mode
         self.automask_loss = automask_loss
-        self.consistency_loss = consistency_loss
-        self.t_loss_weight = t_loss_weight
-        self.R_loss_weight = R_loss_weight
         self.temporal_loss_weight = temporal_loss_weight
         self.spatial_loss_weight = spatial_loss_weight
+        self.temporal_spatial_loss_weight = temporal_spatial_loss_weight
         self.progressive_scaling = ProgressiveScaling(
             progressive_scaling, self.n)
         self.sort_cameras = sort_cameras
@@ -127,9 +124,6 @@ class MultiViewPhotometricLoss(LossBase):
         if self.automask_loss:
             assert self.photometric_reduce_op == 'min', \
                 'For automasking only the min photometric_reduce_op is supported.'
-        if self.consistency_loss:
-            assert self.cameras is not None, 'Need camera number parameters for consistency loss'
-            self.num_cameras = len(self.cameras)
 
     ########################################################################################################################
     @property
@@ -389,67 +383,6 @@ class MultiViewPhotometricLoss(LossBase):
         return smoothness_loss
 
 ########################################################################################################################
-    def pose_conversion(self, pose, extrinsic_1, extrinsic_2):
-        # converted_pose = extrinsic_1.inverse().bmm(extrinsic_2).bmm(pose)\
-        #     .bmm(extrinsic_2.inverse()).bmm(extrinsic_1)
-        converted_pose = extrinsic_1.inverse()@extrinsic_2@pose@extrinsic_2.inverse()@extrinsic_1
-        return converted_pose  # transformation matrix (4*4)
-
-    def calc_consistency_loss(self, poses, extrinsics):
-        """
-        Calculates the consistency loss for multi-cameras pose
-        Parameters
-        ----------
-        poses : list of torch.Tensor [[6,4,4], [6,4,4]] (transformation matrix)
-            Predicted poses for 6 cameras from the poseNet [[pose(t->t-1)], [pose(t->t+1)]]
-        extrinsics: list of torch.Tensor [6,4,4]
-            Extrinsics matrix for 6 cameras
-
-        Returns
-        -------
-        consistency_loss : torch.Tensor [1]
-            Consistency loss
-        """
-        converted_poses_forward, converted_poses_backward = [], []
-        poses_forward = poses[0].item()   # in shape of torch.tensor [6,4,4]
-        poses_backward = poses[1].item()  # in shape of torch.tensor [6,4,4]
-
-        for i in range(poses_forward.shape[0]-1):
-            converted_poses_forward.append(self.pose_conversion(poses_forward[i+1], extrinsics[0], extrinsics[i+1]))
-            converted_poses_backward.append(self.pose_conversion(poses_backward[i+1], extrinsics[0], extrinsics[i+1]))
-        t_consistency_loss = 0
-        for i in range(len(converted_poses_forward)):  # should be 5
-            t_original_forward = poses_forward[i+1][:3, -1]
-            t_original_backward = poses_backward[i+1][:3, -1]
-            t_converted_forward = converted_poses_forward[i][:3, -1]
-            t_converted_backward = converted_poses_backward[i][:3, -1]
-            t_consistency_loss = t_consistency_loss + torch.norm((t_original_forward-t_converted_forward), 2) \
-                                 + torch.norm((t_original_backward-t_converted_backward), 2)
-
-        rotation_original_forward = poses[0].item()[:, :3, :3]
-        rotation_original_backward = poses[1].item()[:, :3, :3]
-        rotation_converted_forward, rotation_converted_backward = [], []
-        for i in range(len(converted_poses_forward)):
-            rotation_converted_forward.append(converted_poses_forward[i][:3, :3])
-            rotation_converted_backward.append(converted_poses_backward[i][:3, :3])
-        euler_original_forward, euler_original_backward = [], []
-        euler_converted_forward, euler_converted_backward = [], []
-        for i in range(len(converted_poses_forward)):  # should be five
-            euler_original_forward.append(Rotation2euler(rotation_original_forward[i+1]))
-            euler_original_backward.append(Rotation2euler(rotation_original_backward[i+1]))
-            euler_converted_forward.append(Rotation2euler(rotation_converted_forward[i]))
-            euler_converted_backward.append(Rotation2euler(rotation_converted_backward[i]))
-        R_consistency_loss = 0
-        for i in range(len(euler_converted_forward)):  # should be 5
-            R_consistency_loss = R_consistency_loss \
-                                 + torch.sum(torch.tensor([torch.norm(torch.tensor(euler_original_forward[j]-euler_converted_forward[j]), 2)
-                                                           for j in range(len(euler_original_forward))])) \
-                                 + torch.sum(torch.tensor([torch.norm(torch.tensor(euler_original_backward[j]-euler_converted_backward[j]), 2)
-                                                           for j in range(len(euler_original_forward))]))
-        pose_consistency_loss = self.t_loss_weight * t_consistency_loss + self.R_loss_weight * R_consistency_loss
-        return pose_consistency_loss
-
-########################################################################################################################
 
     def forward(self, image, context, inv_depths, K, ref_K, extrinsics, poses, return_logs=False, progress=0.0):
         """
@@ -526,14 +459,14 @@ class MultiViewPhotometricLoss(LossBase):
 
             photometric_loss = self.calc_photometric_loss(ref_warped, images)
             for i in range(self.n):
-                photometric_losses[i].append(photometric_loss[i])
+                photometric_losses[i].append(self.temporal_loss_weight*photometric_loss[i])
             # If using automask
             if self.automask_loss:
                 # Calculate and store unwarped image loss
                 ref_images = match_scales(ref_image, inv_depths, self.n)
                 unwarped_image_loss = self.calc_photometric_loss(ref_images, images)
                 for i in range(self.n):
-                    photometric_losses[i].append(unwarped_image_loss[i])
+                    photometric_losses[i].append(self.temporal_loss_weight*unwarped_image_loss[i])
 
         # Step 2: Calculate the losses spatial-wise
         # reconstruct context images
@@ -588,7 +521,7 @@ class MultiViewPhotometricLoss(LossBase):
             photometric_loss = [self.calc_photometric_loss(ref_warped, images)[i] * valid_points_masks[i]
                                 for i in range(len(valid_points_masks))]
             for i in range(self.n):
-                photometric_losses[i].append(self.temporal_loss_weight*photometric_loss[i])
+                photometric_losses[i].append(self.spatial_loss_weight*photometric_loss[i])
 
         # Step 3: Calculate the loss temporal-spatial wise
         # reconstruct context images
@@ -639,17 +572,13 @@ class MultiViewPhotometricLoss(LossBase):
                 photometric_loss = [self.calc_photometric_loss(ref_warped, images)[i] * valid_points_masks[i] \
                                     for i in range(len(valid_points_masks))]
                 for i in range(self.n):
-                    photometric_losses[i].append(self.spatial_loss_weight*photometric_loss[i])
+                    photometric_losses[i].append(self.temporal_spatial_loss_weight*photometric_loss[i])
 
         # Step 4: Calculate reduced photometric loss
         loss = self.reduce_photometric_loss(photometric_losses)
         # Include smoothness loss if requested
         if self.smooth_loss_weight > 0.0:
             loss += self.calc_smoothness_loss(inv_depths, images)
-        if self.consistency_loss:
-            print('##mul.py using consistency_loss')
-            # poses: type List [[pose(t->t-1)], [pose(t->t+1)]]
-            loss += self.calc_consistency_loss(poses, extrinsics)
         # Return losses and metrics
         return {
             'loss': loss.unsqueeze(0),

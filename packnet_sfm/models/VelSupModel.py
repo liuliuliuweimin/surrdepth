@@ -1,10 +1,10 @@
 # Copyright 2020 Toyota Research Institute.  All rights reserved.
 
-from packnet_sfm.models.SelfSupModel import SelfSupModel
+from packnet_sfm.models.SupModel import SupModel
 from packnet_sfm.losses.velocity_loss import VelocityLoss
 
 
-class VelSupModel(SelfSupModel):
+class VelSupModel(SupModel):
     """
     Self-supervised model with additional velocity supervision loss.
 

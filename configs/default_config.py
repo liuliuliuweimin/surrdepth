@@ -14,7 +14,7 @@ cfg.debug = False   # Debugging flag
 cfg.arch = CN()
 cfg.arch.seed = 42                      # Random seed for Pytorch/Numpy initialization
 cfg.arch.min_epochs = 1                 # Minimum number of epochs
-cfg.arch.max_epochs = 20                # Maximum number of epochs
+cfg.arch.max_epochs = 50                # Maximum number of epochs
 ########################################################################################################################
 ### CHECKPOINT
 ########################################################################################################################
@@ -105,14 +105,15 @@ cfg.model.loss.automask_loss = True             # Automasking to remove static p
 cfg.model.loss.consistency_loss = False          # Consistency Loss for multi-cameras' pose
 cfg.model.loss.t_loss_weight = 0.0             # Consistency Loss parameter (used to be 0.1)
 cfg.model.loss.R_loss_weight = 0.0              # Consistency Loss parameter (used to be 0.1)
-cfg.model.loss.temporal_loss_weight = 1.0       # Temporal Loss parameter  (used to be 1.0)
-cfg.model.loss.spatial_loss_weight = 0.0        # Spatial Loss parameter (used to be 0.1)
+cfg.model.loss.temporal_loss_weight = 0.0       # Temporal Loss parameter  (used to be 1.0)
+cfg.model.loss.spatial_loss_weight = 0.2        # Spatial Loss parameter (used to be 0.1)
+cfg.model.loss.temporal_spatial_loss_weight = 0.0  # Temporal spatial loss parameter (used to be 0.1)
 #
 cfg.model.loss.velocity_loss_weight = 0.1       # Velocity supervision loss weight
 #
 cfg.model.loss.supervised_method = 'sparse-l1'  # Method for depth supervision
 cfg.model.loss.supervised_num_scales = 4        # Number of scales for supervised learning
-cfg.model.loss.supervised_loss_weight = 0.9     # Supervised loss weight
+cfg.model.loss.supervised_loss_weight = 1.0     # Supervised loss weight
 ########################################################################################################################
 ### MODEL.DEPTH_NET
 ########################################################################################################################

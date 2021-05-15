@@ -105,11 +105,6 @@ class ModelWrapper(torch.nn.Module):
         return self.model.depth_net
 
     @property
-    def pose_net(self):
-        """Returns pose network."""
-        return self.model.pose_net
-
-    @property
     def logs(self):
         """Returns various logs for tracking."""
         params = OrderedDict()
@@ -139,13 +134,7 @@ class ModelWrapper(torch.nn.Module):
                 'params': self.depth_net.parameters(),
                 **filter_args(optimizer, self.config.model.optimizer.depth)
             })
-        # Pose optimizer
-        if self.pose_net is not None:
-            params.append({
-                'name': 'Pose',
-                'params': self.pose_net.parameters(),
-                **filter_args(optimizer, self.config.model.optimizer.pose)
-            })
+
         # Create optimizer with parameters
         optimizer = optimizer(params)
 
@@ -286,10 +275,10 @@ class ModelWrapper(torch.nn.Module):
         assert self.depth_net is not None, 'Depth network not defined'
         return self.depth_net(*args, **kwargs)
 
-    def pose(self, *args, **kwargs):
-        """Runs the depth network and returns the output."""
-        assert self.pose_net is not None, 'Pose network not defined'
-        return self.pose_net(*args, **kwargs)
+    # def pose(self, *args, **kwargs):
+    #     """Runs the depth network and returns the output."""
+    #     assert self.pose_net is not None, 'Pose network not defined'
+    #     return self.pose_net(*args, **kwargs)
 
     def evaluate_depth(self, batch):
         """Evaluate batch to produce depth metrics."""
@@ -408,36 +397,6 @@ def setup_depth_net(config, prepared, **kwargs):
                                  ['depth_net', 'disp_network'])
     return depth_net
 
-
-def setup_pose_net(config, prepared, **kwargs):
-    """
-    Create a pose network
-
-    Parameters
-    ----------
-    config : CfgNode
-        Network configuration
-    prepared : bool
-        True if the network has been prepared before
-    kwargs : dict
-        Extra parameters for the network
-
-    Returns
-    -------
-    pose_net : nn.Module
-        Created pose network
-    """
-    print0(pcolor('PoseNet: %s' % config.name, 'yellow'))
-    pose_net = load_class_args_create(config.name,
-        paths=['packnet_sfm.networks.pose',],
-        args={**config, **kwargs},
-    )
-    if not prepared and config.checkpoint_path is not '':
-        pose_net = load_network(pose_net, config.checkpoint_path,
-                                ['pose_net', 'pose_network'])
-    return pose_net
-
-
 def setup_model(config, prepared, cameras, **kwargs):
     """
     Create a model
@@ -462,9 +421,6 @@ def setup_model(config, prepared, cameras, **kwargs):
     # Add depth network if required
     if model.network_requirements['depth_net']:
         model.add_depth_net(setup_depth_net(config.depth_net, prepared))
-    # Add pose network if required
-    if model.network_requirements['pose_net']:
-        model.add_pose_net(setup_pose_net(config.pose_net, prepared))
     # If a checkpoint is provided, load pretrained model
     if not prepared and config.checkpoint_path is not '':
         model = load_network(model, config.checkpoint_path, 'model')
@@ -531,6 +487,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
                 **dataset_args, **dataset_args_i,
                 cameras=config.cameras[i],
             )
+
         # # Image dataset
         # elif config.dataset[i] == 'Image':
         #     from packnet_sfm.datasets.image_dataset import ImageDataset
@@ -538,6 +495,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
         #         config.path[i], config.split[i],
         #         **dataset_args, **dataset_args_i,
         #     )
+
         else:
             ValueError('Unknown dataset %d' % config.dataset[i])
 
