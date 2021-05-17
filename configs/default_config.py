@@ -102,14 +102,12 @@ cfg.model.loss.disp_norm = True                 # Inverse depth normalization
 cfg.model.loss.clip_loss = 0.0                  # Clip loss threshold variance
 cfg.model.loss.padding_mode = 'zeros'           # Photometric loss padding mode
 cfg.model.loss.automask_loss = True             # Automasking to remove static pixels
-cfg.model.loss.consistency_loss = False          # Consistency Loss for multi-cameras' pose
-cfg.model.loss.t_loss_weight = 0.0             # Consistency Loss parameter (used to be 0.1)
-cfg.model.loss.R_loss_weight = 0.0              # Consistency Loss parameter (used to be 0.1)
+cfg.model.loss.depth_consistency_loss_weight = 0.0
+cfg.model.loss.scene_flow_consistency_loss_weight = 0.0
 cfg.model.loss.temporal_loss_weight = 0.0       # Temporal Loss parameter  (used to be 1.0)
-cfg.model.loss.spatial_loss_weight = 0.1        # Spatial Loss parameter (used to be 0.1)
+cfg.model.loss.spatial_loss_weight = 0.0        # Spatial Loss parameter (used to be 0.1)
 cfg.model.loss.temporal_spatial_loss_weight = 0.0  # Temporal spatial loss parameter (used to be 0.1)
-#
-cfg.model.loss.velocity_loss_weight = 0.1       # Velocity supervision loss weight
+
 #
 cfg.model.loss.supervised_method = 'sparse-l1'  # Method for depth supervision
 cfg.model.loss.supervised_num_scales = 4        # Number of scales for supervised learning

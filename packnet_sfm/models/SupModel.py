@@ -146,8 +146,8 @@ class SupModel(SfmModel):
                 output['inv_depths'], poses_gt, batch['intrinsics'], batch['extrinsics'],
                 return_logs=return_logs, progress=progress)
 
-            loss = multiview_loss['loss']
-
+            # loss = multiview_loss['loss']
+            loss = 0.
             # Calculate supervised loss
             supervision_loss = self.supervised_loss(output['inv_depths'], depth2inv(batch['depth']),
                                                     return_logs=return_logs, progress=progress)

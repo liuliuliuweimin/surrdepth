@@ -93,7 +93,8 @@ class MultiViewPhotometricLoss(LossBase):
         Extra parameters
     """
     def __init__(self, num_scales=4, ssim_loss_weight=0.85, occ_reg_weight=0.1, smooth_loss_weight=0.1,
-                 consistency_loss_weight=0.1, C1=1e-4, C2=9e-4, photometric_reduce_op='mean', disp_norm=True,
+                 depth_consistency_loss_weight=0.1, scene_flow_consistency_loss_weight=0.1,
+                 C1=1e-4, C2=9e-4, photometric_reduce_op='mean', disp_norm=True,
                  sort_cameras=False, sort_swap=[], clip_loss=0.5, progressive_scaling=0.0, padding_mode='zeros',
                  temporal_loss_weight=1.0, spatial_loss_weight=0.1, temporal_spatial_loss_weight=0.1
                  , automask_loss=True, cameras=None, **kwargs):
@@ -103,7 +104,8 @@ class MultiViewPhotometricLoss(LossBase):
         self.ssim_loss_weight = ssim_loss_weight
         self.occ_reg_weight = occ_reg_weight
         self.smooth_loss_weight = smooth_loss_weight
-        self.consistency_loss_weight = consistency_loss_weight
+        self.depth_consistency_loss_weight = depth_consistency_loss_weight
+        self.scene_flow_consistency_loss_weight = scene_flow_consistency_loss_weight
         self.C1 = C1
         self.C2 = C2
         self.photometric_reduce_op = photometric_reduce_op
@@ -225,7 +227,7 @@ class MultiViewPhotometricLoss(LossBase):
         for i in range(self.n):
             _, _, DH, DW = inv_depths[i].shape
             scale_factor = DW / float(W)
-            cams.append(Camera(K=K.float(),Tcw=extrinsics_1).scaled(scale_factor).to(device))
+            cams.append(Camera(K=K.float(), Tcw=extrinsics_1).scaled(scale_factor).to(device))
             ref_cams.append(Camera(K=ref_K.float(), Tcw=extrinsics_2).scaled(scale_factor).to(device))
         # View synthesis
         depths = [inv2depth(inv_depths[i]) for i in range(self.n)]

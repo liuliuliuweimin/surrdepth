@@ -8,6 +8,8 @@ from packnet_sfm.utils.logging import AvgMeter
 from torch.utils.tensorboard import SummaryWriter
 
 
+idx_log = 0
+
 
 class NewTrainer(BaseTrainer):
     def __init__(self, **kwargs):
@@ -21,6 +23,8 @@ class NewTrainer(BaseTrainer):
 
         self.avg_loss = AvgMeter(50)
         self.dtype = kwargs.get("dtype", None)  # just for test for now
+
+        self.writer = SummaryWriter()
 
     @property
     def proc_rank(self):
@@ -51,7 +55,7 @@ class NewTrainer(BaseTrainer):
         train_dataloader = module.train_dataloader()
         val_dataloaders = module.val_dataloader()
 
-        writer = SummaryWriter()
+
 
         # Epoch loop
         for epoch in range(module.current_epoch, self.max_epochs):
@@ -63,14 +67,14 @@ class NewTrainer(BaseTrainer):
             avg_train_supervised_loss = metrics['avg_train-supervised_loss']
 
 
-            writer.add_scalar('Loss/avg_train_loss'
-                              , avg_train_loss, epoch)
-            writer.add_scalar('Loss/avg_train_photometric_loss'
-                              , avg_train_photometric_loss, epoch)
-            writer.add_scalar('Loss/avg_train_smoothness_loss'
-                              , avg_train_smoothness_loss, epoch)
-            writer.add_scalar('Loss/avg_train_supervised_loss'
-                              , avg_train_supervised_loss, epoch)
+            # writer.add_scalar('Loss/avg_train_loss'
+            #                   , avg_train_loss, epoch)
+            # writer.add_scalar('Loss/avg_train_photometric_loss'
+            #                   , avg_train_photometric_loss, epoch)
+            # writer.add_scalar('Loss/avg_train_smoothness_loss'
+            #                   , avg_train_smoothness_loss, epoch)
+            # writer.add_scalar('Loss/avg_train_supervised_loss'
+            #                   , avg_train_supervised_loss, epoch)
 
 
             # Validation
@@ -83,6 +87,7 @@ class NewTrainer(BaseTrainer):
             scheduler.step()
 
     def train(self, dataloader, module, optimizer):
+        global idx_log
         # Set module to train
         module.train()
         # Shuffle dataloader sampler
@@ -111,6 +116,26 @@ class NewTrainer(BaseTrainer):
                 progress_bar.set_description(
                     'Epoch {} | Avg.Loss {:.4f}'.format(
                         module.current_epoch, self.avg_loss(output['loss'].item())))
+            if i % 20 == 0 and i > 0:
+                idx_log += 1
+                metrics = module.training_epoch_end(outputs[-20:])
+                avg_train_loss = metrics['avg_train-loss']
+                avg_train_photometric_loss = metrics['avg_train-photometric_loss']
+                avg_train_smoothness_loss = metrics['avg_train-smoothness_loss']
+                avg_train_supervised_loss = metrics['avg_train-supervised_loss']
+                print('##new_trainer',i," ",idx_log)
+                # idx = (module.current_epoch+1) * 48 + i
+                self.writer.add_scalar('Loss/avg_train_loss'
+                                  , avg_train_loss, idx_log)
+                self.writer.add_scalar('Loss/avg_train_photometric_loss'
+                                  , avg_train_photometric_loss, idx_log)
+                self.writer.add_scalar('Loss/avg_train_smoothness_loss'
+                                  , avg_train_smoothness_loss, idx_log)
+                self.writer.add_scalar('Loss/avg_train_supervised_loss'
+                                  , avg_train_supervised_loss, idx_log)
+
+
+
         # Return outputs for epoch end
         return module.training_epoch_end(outputs)
 

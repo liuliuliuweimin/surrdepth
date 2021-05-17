@@ -8,6 +8,7 @@
 
 `python scripts/train_new.py configs/train_ddad_tiny.yaml`
 
+`CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch --nproc_per_node=2 scripts/train_new.py configs/train_ddad_tiny.yaml`
 ## Ealuate pretrained model provided
 `python scripts/eval_new.py --checkpoint /home/thuar/Desktop/surround_depth/PackNet01_MR_selfsup_D.ckpt --config configs/eval_ddad_tiny.yaml`
 
