@@ -22,6 +22,7 @@ class SupModel(SfmModel):
     kwargs : dict
         Extra parameters
     """
+
     def __init__(self, supervised_loss_weight=1.0, **kwargs):
         # Initializes SelfSupModel
         super().__init__(**kwargs)
@@ -51,7 +52,7 @@ class SupModel(SfmModel):
         }
 
     def multiview_photometric_loss(self, image, ref_images, inv_depths, poses,
-                             intrinsics, extrinsics, return_logs=False, progress=0.0):
+                                   intrinsics, extrinsics, return_logs=False, progress=0.0):
         """
         Calculates the multiview photometric loss.
 
@@ -136,8 +137,8 @@ class SupModel(SfmModel):
             poses_gt = [[], []]
             poses_gt[0], poses_gt[1] = torch.zeros((6, 4, 4)), torch.zeros((6, 4, 4))
             for i in range(6):
-                poses_gt[0][i] = batch['pose'][i] @ batch['pose_context'][0][i].inverse()
-                poses_gt[1][i] = batch['pose'][i] @ batch['pose_context'][1][i].inverse()
+                poses_gt[0][i] = batch['pose_context'][0][i].inverse() @ batch['pose'][i]
+                poses_gt[1][i] = batch['pose_context'][1][i].inverse() @ batch['pose'][i]
             poses_gt = [Pose(poses_gt[0]), Pose(poses_gt[1])]
 
             multiview_loss = self.multiview_photometric_loss(
@@ -148,7 +149,8 @@ class SupModel(SfmModel):
             loss = multiview_loss['loss']
 
             # Calculate supervised loss
-            supervision_loss = self.supervised_loss(output['inv_depths'], depth2inv(batch['depth']), return_logs=return_logs, progress=progress)
+            supervision_loss = self.supervised_loss(output['inv_depths'], depth2inv(batch['depth']),
+                                                    return_logs=return_logs, progress=progress)
             loss += self.supervised_loss_weight * supervision_loss['loss']
 
             # Return loss and metrics
