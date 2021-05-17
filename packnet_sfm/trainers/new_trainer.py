@@ -5,6 +5,9 @@ from packnet_sfm.utils.config import prep_logger_and_checkpoint
 from packnet_sfm.utils.logging import print_config
 from packnet_sfm.utils.logging import AvgMeter
 
+from torch.utils.tensorboard import SummaryWriter
+
+
 
 class NewTrainer(BaseTrainer):
     def __init__(self, **kwargs):
@@ -48,10 +51,28 @@ class NewTrainer(BaseTrainer):
         train_dataloader = module.train_dataloader()
         val_dataloaders = module.val_dataloader()
 
+        writer = SummaryWriter()
+
         # Epoch loop
         for epoch in range(module.current_epoch, self.max_epochs):
             # Train
-            self.train(train_dataloader, module, optimizer)
+            metrics = self.train(train_dataloader, module, optimizer)
+            avg_train_loss = metrics['avg_train-loss']
+            avg_train_photometric_loss = metrics['avg_train-photometric_loss']
+            avg_train_smoothness_loss = metrics['avg_train-smoothness_loss']
+            avg_train_supervised_loss = metrics['avg_train-supervised_loss']
+
+
+            writer.add_scalar('Loss/avg_train_loss'
+                              , avg_train_loss, epoch)
+            writer.add_scalar('Loss/avg_train_photometric_loss'
+                              , avg_train_photometric_loss, epoch)
+            writer.add_scalar('Loss/avg_train_smoothness_loss'
+                              , avg_train_smoothness_loss, epoch)
+            writer.add_scalar('Loss/avg_train_supervised_loss'
+                              , avg_train_supervised_loss, epoch)
+
+
             # Validation
             validation_output = self.validate(val_dataloaders, module)
             # Check and save model

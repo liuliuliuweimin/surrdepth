@@ -38,7 +38,7 @@ class BaseTrainer:
 
     @property
     def is_rank_0(self):
-        return self.proc_rank == 0
+        return self.proc_rank == 1
 
     def check_and_save(self, module, output):
         if self.checkpoint:

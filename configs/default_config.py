@@ -106,7 +106,7 @@ cfg.model.loss.consistency_loss = False          # Consistency Loss for multi-ca
 cfg.model.loss.t_loss_weight = 0.0             # Consistency Loss parameter (used to be 0.1)
 cfg.model.loss.R_loss_weight = 0.0              # Consistency Loss parameter (used to be 0.1)
 cfg.model.loss.temporal_loss_weight = 0.0       # Temporal Loss parameter  (used to be 1.0)
-cfg.model.loss.spatial_loss_weight = 0.2        # Spatial Loss parameter (used to be 0.1)
+cfg.model.loss.spatial_loss_weight = 0.1        # Spatial Loss parameter (used to be 0.1)
 cfg.model.loss.temporal_spatial_loss_weight = 0.0  # Temporal spatial loss parameter (used to be 0.1)
 #
 cfg.model.loss.velocity_loss_weight = 0.1       # Velocity supervision loss weight
