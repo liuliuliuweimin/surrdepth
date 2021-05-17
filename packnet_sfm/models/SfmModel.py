@@ -26,25 +26,21 @@ class SfmModel(nn.Module):
     kwargs : dict
         Extra parameters
     """
-    def __init__(self, depth_net=None, pose_net=None,
-                 rotation_mode='euler', flip_lr_prob=0.0,
+    def __init__(self, depth_net=None, flip_lr_prob=0.0,
                  upsample_depth_maps=False, **kwargs):
         super().__init__()
         self.depth_net = depth_net
-        self.pose_net = pose_net
-        self.rotation_mode = rotation_mode
         self.flip_lr_prob = flip_lr_prob
         self.upsample_depth_maps = upsample_depth_maps
         self._logs = {}
         self._losses = {}
 
         self._network_requirements = {
-                'depth_net': True,  # Depth network required
-                'pose_net': True,   # Pose network required
+                'depth_net': True  # Depth network required
             }
         self._train_requirements = {
-                'gt_depth': False,  # No ground-truth depth required
-                'gt_pose': True,   # No ground-truth pose required
+                'gt_depth': True,  # Ground-truth depth required
+                'gt_pose': True,   # Ground-truth pose required
             }
 
     @property
@@ -95,10 +91,6 @@ class SfmModel(nn.Module):
         """Add a depth network to the model"""
         self.depth_net = depth_net
 
-    def add_pose_net(self, pose_net):
-        """Add a pose network to the model"""
-        self.pose_net = pose_net
-
     def compute_inv_depths(self, image):
         """Computes inverse depth maps from single images"""
         # Randomly flip and estimate inverse depth maps
@@ -110,12 +102,6 @@ class SfmModel(nn.Module):
                 inv_depths, mode='nearest', align_corners=None)
         # Return inverse depth maps
         return inv_depths
-
-    def compute_poses(self, image, contexts):
-        """Compute poses from image and a sequence of context images"""
-        pose_vec = self.pose_net(image, contexts)
-        return [Pose.from_vec(pose_vec[:, i], self.rotation_mode)
-                for i in range(pose_vec.shape[1])]
 
     def forward(self, batch, return_logs=False):
         """
@@ -135,13 +121,8 @@ class SfmModel(nn.Module):
         """
         # Generate inverse depth predictions
         inv_depths = self.compute_inv_depths(batch['rgb'])
-        # Generate pose predictions if available
-        pose = None
-        if 'rgb_context' in batch and self.pose_net is not None:
-            pose = self.compute_poses(batch['rgb'],
-                                      batch['rgb_context'])
+
         # Return output dictionary
         return {
             'inv_depths': inv_depths,
-            'poses': pose,
         }

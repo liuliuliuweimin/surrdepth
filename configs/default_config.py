@@ -14,12 +14,12 @@ cfg.debug = False   # Debugging flag
 cfg.arch = CN()
 cfg.arch.seed = 42                      # Random seed for Pytorch/Numpy initialization
 cfg.arch.min_epochs = 1                 # Minimum number of epochs
-cfg.arch.max_epochs = 20                # Maximum number of epochs
+cfg.arch.max_epochs = 50                # Maximum number of epochs
 ########################################################################################################################
 ### CHECKPOINT
 ########################################################################################################################
 cfg.checkpoint = CN()
-cfg.checkpoint.filepath = '/home/duanyc/Dtorch/surrdepth/checkpoints'            # Checkpoint filepath to save data
+cfg.checkpoint.filepath = '/home/thuar/Desktop/surround_depth/checkpoints'            # Checkpoint filepath to save data
 cfg.checkpoint.save_top_k = 50           # Number of best models to save
 cfg.checkpoint.monitor = 'abs_rel'      # Metric to monitor for logging
 cfg.checkpoint.monitor_index = 0        # Dataset index for the metric to monitor
@@ -70,7 +70,7 @@ cfg.model.scheduler = CN()
 cfg.model.scheduler.name = 'StepLR'     # Scheduler name
 cfg.model.scheduler.step_size = 10      # Scheduler step size
 cfg.model.scheduler.gamma = 0.5         # Scheduler gamma value
-cfg.model.scheduler.T_max = 20          # Scheduler maximum number of iterations
+cfg.model.scheduler.T_max = 8          # Scheduler maximum number of iterations
 ########################################################################################################################
 ### MODEL.PARAMS
 ########################################################################################################################
@@ -88,6 +88,8 @@ cfg.model.loss.progressive_scaling = 0.0        # Training percentage to decay n
 cfg.model.loss.flip_lr_prob = 0.5               # Probablity of horizontal flippping
 cfg.model.loss.rotation_mode = 'euler'          # Rotation mode
 cfg.model.loss.upsample_depth_maps = True       # Resize depth maps to highest resolution
+cfg.model.loss.sort_cameras = False              # Sort cameras by their spatial position
+cfg.model.loss.sort_swap = []
 #
 cfg.model.loss.ssim_loss_weight = 0.85          # SSIM loss weight
 cfg.model.loss.occ_reg_weight = 0.1             # Occlusion regularizer loss weight
@@ -100,17 +102,18 @@ cfg.model.loss.disp_norm = True                 # Inverse depth normalization
 cfg.model.loss.clip_loss = 0.0                  # Clip loss threshold variance
 cfg.model.loss.padding_mode = 'zeros'           # Photometric loss padding mode
 cfg.model.loss.automask_loss = True             # Automasking to remove static pixels
-cfg.model.loss.consistency_loss = True          # Consistency Loss for multi-cameras' pose
-cfg.model.loss.t_loss_weight = 0.1              # Consistency Loss parameter
-cfg.model.loss.R_loss_weight = 0.1              # Consistency Loss parameter
-cfg.model.loss.temporal_loss_weight = 1.0       # Temporal Loss parameter
-cfg.model.loss.spatial_loss_weight = 0.1        # Spatial Loss parameter
+cfg.model.loss.consistency_loss = False          # Consistency Loss for multi-cameras' pose
+cfg.model.loss.t_loss_weight = 0.0             # Consistency Loss parameter (used to be 0.1)
+cfg.model.loss.R_loss_weight = 0.0              # Consistency Loss parameter (used to be 0.1)
+cfg.model.loss.temporal_loss_weight = 0.0       # Temporal Loss parameter  (used to be 1.0)
+cfg.model.loss.spatial_loss_weight = 0.2        # Spatial Loss parameter (used to be 0.1)
+cfg.model.loss.temporal_spatial_loss_weight = 0.0  # Temporal spatial loss parameter (used to be 0.1)
 #
 cfg.model.loss.velocity_loss_weight = 0.1       # Velocity supervision loss weight
 #
 cfg.model.loss.supervised_method = 'sparse-l1'  # Method for depth supervision
 cfg.model.loss.supervised_num_scales = 4        # Number of scales for supervised learning
-cfg.model.loss.supervised_loss_weight = 0.9     # Supervised loss weight
+cfg.model.loss.supervised_loss_weight = 1.0     # Supervised loss weight
 ########################################################################################################################
 ### MODEL.DEPTH_NET
 ########################################################################################################################

@@ -69,3 +69,24 @@ def invert_pose_numpy(T):
     return Tinv
 
 ########################################################################################################################
+########################################################################################################################
+
+def quat2mat(qw, qx, qy, qz, x, y, z):
+    """Convert quaternion coefficients to rotation matrix.
+    Args:
+        quat: first three coeff of quaternion of rotation. fourht is then computed to have a norm of 1 -- size = [B, 3]
+    Returns:
+        Rotation matrix corresponding to the quaternion -- size = [B, 3, 3]
+    """
+
+    w2, x2, y2, z2 = qw * qw, qx * qx, qy * qy, qz * qz
+    wx, wy, wz = qw * qx, qw * qy, qw * qz
+    xy, xz, yz = qx * qy, qx * qz, qy * qz
+
+    Mat = torch.tensor([[w2 + x2 - y2 - z2, 2 * xy - 2 * wz, 2 * wy + 2 * xz, x],
+                        [2 * wz + 2 * xy, w2 - x2 + y2 - z2, 2 * yz - 2 * wx, y],
+                        [2 * xz - 2 * wy, 2 * wx + 2 * yz, w2 - x2 - y2 + z2, z],
+                        [0, 0, 0, 1]], dtype=torch.float32).unsqueeze(0)
+    return Mat
+
+###################################################################################################
