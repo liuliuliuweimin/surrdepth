@@ -60,11 +60,11 @@ class NewTrainer(BaseTrainer):
         # Epoch loop
         for epoch in range(module.current_epoch, self.max_epochs):
             # Train
-            metrics = self.train(train_dataloader, module, optimizer)
-            avg_train_loss = metrics['avg_train-loss']
-            avg_train_photometric_loss = metrics['avg_train-photometric_loss']
-            avg_train_smoothness_loss = metrics['avg_train-smoothness_loss']
-            avg_train_supervised_loss = metrics['avg_train-supervised_loss']
+            self.train(train_dataloader, module, optimizer)
+            # avg_train_loss = metrics['avg_train-loss']
+            # avg_train_photometric_loss = metrics['avg_train-photometric_loss']
+            # avg_train_smoothness_loss = metrics['avg_train-smoothness_loss']
+            # avg_train_supervised_loss = metrics['avg_train-supervised_loss']
 
 
             # writer.add_scalar('Loss/avg_train_loss'
